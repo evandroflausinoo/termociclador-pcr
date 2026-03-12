@@ -1,10 +1,15 @@
-# Termociclador PCR
+# Termociclador PCR - Controle Térmico Inteligente
 
-Projeto de desenvolvimento de um termociclador PCR com integração entre hardware e software para controle térmico automatizado em ciclos de amplificação de DNA.
+Este projeto faz parte do desenvolvimento de um termociclador PCR,
+um equipamento utilizado em biologia molecular para amplificação de DNA.
 
-## Sobre o projeto
+O trabalho investiga o controle térmico do equipamento e compara duas abordagens:
 
-O objetivo deste projeto é desenvolver um protótipo de termociclador PCR capaz de realizar ciclos controlados de temperatura, fundamentais para processos de desnaturação, anelamento e extensão na amplificação de material genético.
+- Controle clássico usando **PID**
+- Controle baseado em **Inteligência Artificial (Reinforcement Learning - PPO)**
+
+A simulação também considera efeitos de rede como **latência, jitter e perda de pacotes**,
+representando um cenário de controle distribuído entre um computador e um microcontrolador.
 
 ## Objetivos
 
