@@ -10,6 +10,8 @@ O trabalho investiga o controle térmico do equipamento e compara duas abordagen
 A simulação também considera efeitos de rede como **latência, jitter e perda de pacotes**,
 representando um cenário de controle distribuído entre um computador e um microcontrolador.
 
+
+
 ## Arquitetura do sistem
 O experimento simula um sistema de controle térmico distribuído.
 
@@ -48,6 +50,8 @@ NET2 --> PC
 - Automatizar os ciclos térmicos do processo de PCR
 - Integrar software e eletrônica em um protótipo funcional
 
+
+
 ## Tecnologias e componentes
 - Linguagem Python
 - Microcontrolador
@@ -56,6 +60,7 @@ NET2 --> PC
 - Ponte H / módulo de acionamento
 - Estrutura de controle térmico
   
+
 
 ## Modelo térmico utilizado na simulação
 Para os experimentos de controle foi utilizado um modelo térmico simplificado
@@ -76,6 +81,43 @@ A caracterização do comportamento térmico real será realizada após a
 montagem do protótipo físico do equipamento, permitindo o ajuste do
 modelo e a validação experimental do sistema de controle.
 
+
+
+## Metodologia do experimento
+
+O estudo foi conduzido em ambiente de simulação para comparar duas abordagens
+de controle aplicadas ao sistema térmico de um termociclador PCR.
+
+1. **Modelagem do sistema térmico**  
+   Um modelo dinâmico simplificado de primeira ordem foi utilizado para representar
+   o comportamento térmico do sistema.
+
+2. **Definição do perfil térmico (PCR)**  
+   O setpoint segue as três fases típicas do processo de PCR:
+   - 95 °C — desnaturação
+   - 55 °C — anelamento
+   - 72 °C — extensão
+
+3. **Implementação dos controladores**  
+   Foram implementadas duas abordagens:
+   - Controlador clássico **PID**
+   - Controlador baseado em **Reinforcement Learning (PPO)**
+
+4. **Simulação de rede**  
+   Para tornar o experimento mais realista, a comunicação entre controlador
+   e sistema físico foi simulada com efeitos de rede:
+   - atraso de comunicação
+   - jitter
+   - perda de pacotes
+
+5. **Análise dos resultados**  
+   O desempenho dos controladores foi avaliado observando:
+   - acompanhamento do setpoint
+   - estabilidade do sistema
+   - sensibilidade aos efeitos da rede
+  
+
+
 ## Estrutura do repositório
 ```
 termociclador-pcr
@@ -94,14 +136,20 @@ termociclador-pcr
     └── resultado_final.png
 ```
 
+
+
 ## Status do projeto
 Projeto em desenvolvimento.
+
+
+
 
 ## Resultado da Simulação
 Comparação entre controle clássico (PID) e Inteligência Artificial (PPO)
 no controle térmico de um termociclador PCR sob condições de rede com jitter.
 
 ![Comparação PID vs PPO](graficos/resultado_final.png)
+
 
 
 ## Como rodar a simulação
