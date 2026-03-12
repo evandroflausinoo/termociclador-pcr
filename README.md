@@ -28,7 +28,7 @@ representando um cenário de controle distribuído entre um computador e um micr
 - Estrutura de controle térmico
 
 ## Estrutura do repositório
-
+```
 termociclador-pcr
 │
 ├── README.md
@@ -43,6 +43,7 @@ termociclador-pcr
 │
 └── graficos
     └── resultado_final.png
+```
 
 ## Status do projeto
 
