@@ -31,18 +31,18 @@ representando um cenário de controle distribuído entre um computador e um micr
 
 termociclador-pcr
 │
-├── README.md
-├── requirements.txt
+├ ── README.md
+├ ── requirements.txt
 │
-├── simulador
-│   ├── modelo_termico.py
-│   ├── setpoint.py
-│   ├── pid_baseline.py
-│   ├── pid_jitter.py
-│   └── comparacao_pid_vs_rl.py
+├ ── simulador
+│   ├ ── modelo_termico.py
+│   ├ ── setpoint.py
+│   ├ ── pid_baseline.py
+│   ├ ── pid_jitter.py
+│   └ ── comparacao_pid_vs_rl.py
 │
-└── graficos
-    └── resultado_final.png
+└ ── graficos
+    └ ── resultado_final.png
 
 ## Status do projeto
 
