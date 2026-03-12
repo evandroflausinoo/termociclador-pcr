@@ -42,6 +42,22 @@ no controle térmico de um termociclador PCR sob condições de rede com jitter.
 
 ![Comparação PID vs PPO](graficos/resultado_final.png)
 
+## Como rodar a simulação
+
+1. Clone o repositório:
+https://github.com/evandroflausinoo/termociclador-pcr.git
+
+2. Entre na pasta do projeto:
+cd termociclador-pcr
+
+4. Instale as dependências (Python):
+pip install numpy matplotlib gymnasium stable-baselines3
+
+5. Execute a simulação de comparação entre PID e IA:
+python simulador/comparacao_pid_vs_rl.py
+
+6. Isso irá gerar gráficos comparando o controle PID clássico com o controle baseado em Reinforcement Learning (PPO).
+
 ## Autor
 
 Evandro Flausino
