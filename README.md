@@ -30,6 +30,13 @@ O objetivo deste projeto é desenvolver um protótipo de termociclador PCR capaz
 
 Projeto em desenvolvimento.
 
+## Resultado da Simulação
+
+Comparação entre controle clássico (PID) e Inteligência Artificial (PPO)
+no controle térmico de um termociclador PCR sob condições de rede com jitter.
+
+![Comparação PID vs PPO](graficos/resultado_final.png)
+
 ## Autor
 
 Evandro Flausino
