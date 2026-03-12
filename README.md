@@ -60,6 +60,26 @@ NET2 --> PC
 - Ponte H / módulo de acionamento
 - Estrutura de controle térmico
 
+## Modelo térmico utilizado na simulação
+
+Para os experimentos de controle foi utilizado um modelo térmico simplificado
+de primeira ordem, com o objetivo de simular o comportamento aproximado do
+sistema térmico de um termociclador PCR.
+
+O modelo considera:
+
+- ganho térmico proporcional ao sinal de controle
+- perda de calor para o ambiente
+- temperatura ambiente constante
+- ruído térmico simulado
+
+Esse modelo é utilizado para avaliar o desempenho dos controladores
+(PID e Reinforcement Learning) em ambiente de simulação.
+
+A caracterização do comportamento térmico real será realizada após a
+montagem do protótipo físico do equipamento, permitindo o ajuste do
+modelo e a validação experimental do sistema de controle.
+
 ## Estrutura do repositório
 ```
 termociclador-pcr
