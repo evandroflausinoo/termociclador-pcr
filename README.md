@@ -10,8 +10,7 @@ O trabalho investiga o controle térmico do equipamento e compara duas abordagen
 A simulação também considera efeitos de rede como **latência, jitter e perda de pacotes**,
 representando um cenário de controle distribuído entre um computador e um microcontrolador.
 
-## Arquitetura do sistema
-
+## Arquitetura do sistem
 O experimento simula um sistema de controle térmico distribuído.
 
 O controlador (PID ou RL) é executado no computador, enquanto o
@@ -44,7 +43,6 @@ NET2 --> PC
 ```
 
 ## Objetivos
-
 - Desenvolver a estrutura de hardware do equipamento
 - Implementar o controle de temperatura
 - Automatizar os ciclos térmicos do processo de PCR
@@ -60,7 +58,6 @@ NET2 --> PC
   
 
 ## Modelo térmico utilizado na simulação
-
 Para os experimentos de controle foi utilizado um modelo térmico simplificado
 de primeira ordem, com o objetivo de simular o comportamento aproximado do
 sistema térmico de um termociclador PCR.
@@ -98,18 +95,16 @@ termociclador-pcr
 ```
 
 ## Status do projeto
-
 Projeto em desenvolvimento.
 
 ## Resultado da Simulação
-
 Comparação entre controle clássico (PID) e Inteligência Artificial (PPO)
 no controle térmico de um termociclador PCR sob condições de rede com jitter.
 
 ![Comparação PID vs PPO](graficos/resultado_final.png)
 
-## Como rodar a simulação
 
+## Como rodar a simulação
 1. Clone o repositório:
 https://github.com/evandroflausinoo/termociclador-pcr.git
 
@@ -123,6 +118,7 @@ pip install -r requirements.txt
 python simulador/comparacao_pid_vs_rl.py
 
 7. Isso irá gerar gráficos comparando o controle PID clássico com o controle baseado em Reinforcement Learning (PPO).
+
 
 ## Autor
 
