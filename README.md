@@ -11,6 +11,39 @@ O trabalho investiga o controle térmico do equipamento e compara duas abordagen
 A simulação também considera efeitos de rede como **latência, jitter e perda de pacotes**,
 representando um cenário de controle distribuído entre um computador e um microcontrolador.
 
+## Arquitetura do sistema
+
+O experimento simula um sistema de controle térmico distribuído.
+
+O controlador (PID ou RL) é executado no computador, enquanto o
+sistema físico é representado por um modelo térmico equivalente
+ao comportamento de um termociclador PCR.
+
+A comunicação entre controlador e sistema físico é simulada como
+uma rede sujeita a:
+
+- latência
+- jitter
+- perda de pacotes
+
+```mermaid
+flowchart TD
+
+PC["Controlador no PC<br>PID ou PPO"]
+NET1["Rede (jitter / atraso)"]
+ESP["Microcontrolador ESP"]
+PLANT["Sistema térmico"]
+SENSOR["Sensor de temperatura"]
+NET2["Rede (jitter / atraso)"]
+
+PC --> NET1
+NET1 --> ESP
+ESP --> PLANT
+PLANT --> SENSOR
+SENSOR --> NET2
+NET2 --> PC
+```
+
 ## Objetivos
 
 - Desenvolver a estrutura de hardware do equipamento
