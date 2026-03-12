@@ -1,5 +1,4 @@
 # Termociclador PCR - Controle Térmico Inteligente
-
 Este projeto faz parte do desenvolvimento de um termociclador PCR,
 um equipamento utilizado em biologia molecular para amplificação de DNA.
 
@@ -52,13 +51,13 @@ NET2 --> PC
 - Integrar software e eletrônica em um protótipo funcional
 
 ## Tecnologias e componentes
-
 - Linguagem Python
 - Microcontrolador
 - Sensores de temperatura
 - Sistema de aquecimento
 - Ponte H / módulo de acionamento
 - Estrutura de controle térmico
+  
 
 ## Modelo térmico utilizado na simulação
 
