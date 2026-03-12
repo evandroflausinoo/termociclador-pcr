@@ -12,7 +12,7 @@ representando um cenário de controle distribuído entre um computador e um micr
 
 
 
-## Arquitetura do sistem
+## Arquitetura do sistema
 O experimento simula um sistema de controle térmico distribuído.
 
 O controlador (PID ou RL) é executado no computador, enquanto o
