@@ -17,7 +17,7 @@ representando um cenário de controle distribuído entre um computador e um micr
 
 Comparação entre PID clássico e IA (PPO) sob condições de rede com jitter:
 
-![Comparação PID vs PPO](graficos/resultado_final.png)
+![Comparação PID vs PPO]([graficos/resultado_final.png](https://vscode.dev/github/evandroflausinoo/termociclador-pcr/blob/main/simulador/graficos/01_comparativo_pid_vs_ppo.png))
 
 O agente PPO demonstrou maior robustez aos efeitos de rede, mantendo o rastreamento
 do setpoint mesmo com leituras atrasadas e comandos perdidos — comportamento
