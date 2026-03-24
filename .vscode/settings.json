@@ -1,0 +1,8 @@
+{
+    "editor.autoClosingBrackets": "languageDefined",
+    "javascript.format.insertSpaceAfterOpeningAndBeforeClosingEmptyBraces": true,
+    "editor.formatOnType": false,
+    "editor.autoClosingQuotes": "languageDefined",
+    "editor.autoSurround": "languageDefined",
+    "python.REPL.enableREPLSmartSend": false
+}
