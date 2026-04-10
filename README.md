@@ -1,6 +1,6 @@
 # Termociclador PCR — Controle Térmico Inteligente
 
-Projeto de TCC que investiga o controle térmico de um termociclador PCR,
+Projeto que investiga o controle térmico de um termociclador PCR,
 equipamento utilizado em biologia molecular para amplificação de DNA.
 
 O trabalho compara duas abordagens de controle em ambiente simulado:
