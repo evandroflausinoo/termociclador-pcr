@@ -1,4 +1,4 @@
-# Termociclador PCR — Controle Térmico Inteligente
+# Termociclador PCR - Controle Térmico Inteligente
 
 Projeto que investiga o controle térmico de um termociclador PCR,
 equipamento utilizado em biologia molecular para amplificação de DNA.
