@@ -19,9 +19,7 @@ Comparação entre PID clássico e IA (PPO) sob condições de rede com jitter:
 
 ![Comparação PID vs PPO](simulador/graficos/01_comparativo_pid_vs_ppo.png)
 
-O agente PPO demonstrou maior robustez aos efeitos de rede, mantendo o rastreamento
-do setpoint mesmo com leituras atrasadas e comandos perdidos, comportamento
-que o PID clássico não consegue reproduzir sem ajuste dinâmico de ganhos.
+O agente PPO demonstrou maior robustez aos efeitos de rede, mantendo o rastreamento do setpoint de forma estável durante 10 ciclos completos de PCR (600 segundos), mesmo sob condições severas de jitter e perda de pacotes.
 
 ---
 
@@ -108,18 +106,19 @@ termociclador-pcr/
 ├── LICENSE
 │
 ├── simulador/
-│   ├── modelo_termico.py       # modelo físico do sistema térmico
-│   ├── setpoint.py             # perfil de temperatura PCR
-│   ├── pid_baseline_final.py   # controlador PID + simulação sem rede
-│   ├── pid_com_jitter.py       # PID com simulação de rede
-│   └── confronto_final.py      # ambiente PPO + comparação PID vs IA
+│   ├── modelo_termico.py           # modelo físico do sistema térmico
+│   ├── setpoint.py                 # perfil de temperatura PCR
+│   ├── pid_baseline_final.py       # controlador PID + simulação sem rede
+│   ├── pid_com_jitter.py           # PID com simulação de rede
+│   ├── confronto_final.py          # ambiente PPO + comparação PID vs IA
+│   └── ppo_pcr_jitter_final.zip    # modelo PPO treinado (agente RL)
 │
 └── graficos/
-    ├── resultado_final.png
     ├── 01_comparativo_pid_vs_ppo.png
     ├── 02_pid_sensor_real_vs_visualizada.png
     ├── 03_pid_comando_ucmd_vs_uaplicado.png
-    └── 04_ppo_sensor_real_vs_visualizada.png
+    ├── 04_ppo_sensor_real_vs_visualizada.png
+    └── 05_ppo_comando_ucmd_vs_uaplicado.png
 ```
 
 ---
