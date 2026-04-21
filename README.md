@@ -6,7 +6,7 @@ equipamento utilizado em biologia molecular para amplificação de DNA.
 O trabalho compara duas abordagens de controle em ambiente simulado:
 
 - Controle clássico com **PID**
-- Controle baseado em **Inteligência Artificial (Reinforcement Learning — PPO)**
+- Controle baseado em **Inteligência Artificial (Reinforcement Learning - PPO)**
 
 A simulação considera efeitos reais de rede como **latência, jitter e perda de pacotes**,
 representando um cenário de controle distribuído entre um computador e um microcontrolador.
