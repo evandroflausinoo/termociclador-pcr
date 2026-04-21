@@ -13,7 +13,6 @@ representando um cenário de controle distribuído entre um computador e um micr
 
 <img width="837" height="515" alt="Captura de tela 2026-02-01 210350" src="https://github.com/user-attachments/assets/e3e45a1a-4d3c-4bf6-b059-430530f3a6d1" />
 
-                                    (imagem ilustrativa)
 
 ---
 
