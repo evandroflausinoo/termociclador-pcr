@@ -170,7 +170,7 @@ python simulador/pid_com_jitter.py
 
 ## Status
 
-Simulação concluída. Montagem do hardware em desenvolvimento.
+Simulação concluída. Hardware em desenvolvimento.
 
 ---
 
