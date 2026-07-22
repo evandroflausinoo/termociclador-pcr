@@ -11,7 +11,7 @@ O trabalho compara duas abordagens de controle em ambiente simulado:
 A simulação considera efeitos reais de rede como **latência, jitter e perda de pacotes**,
 representando um cenário de controle distribuído entre um computador e um microcontrolador.
 
-![Protótipo Físico do Termociclador](graficos/foto_prototipo.jpg)
+![Protótipo Físico do Termociclador](simulador/graficos/foto_prototipo.jpg)
 
 
 ---
