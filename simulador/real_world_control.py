@@ -4,149 +4,195 @@ import numpy as np
 import serial
 import time
 import warnings
+import csv
+import sys
+import os
+import datetime
 from collections import deque
 from stable_baselines3 import PPO
-# Importando minha função de gerar a curva de temperatura do PCR
 from setpoint import gerar_setpoint_pcr
 
-# Silenciando os avisos do Gym/Numpy pra deixar o terminal limpo
 warnings.filterwarnings("ignore")
 
-class RealThermalEnv(gym.Env):
-    def __init__(self, port='COM3', baudrate=115200):
-        super(RealThermalEnv, self).__init__()
-        
-        # Conexão com o ESP32
-        try:
-            self.ser = serial.Serial(port, baudrate, timeout=2)
-            time.sleep(2) # Tempo pro ESP32 dar o boot
-            print(f"--- HARDWARE CONECTADO: {port} ---")
-        except Exception as e:
-            print(f"ERRO DE CONEXÃO: {e}")
-            exit()
+MAX_SAFE_TEMP = 105.0
 
-        # Definição dos espaços (0=Parar, 1=Esquentar, 2=Esfriar)
-        self.action_space = spaces.Discrete(3)
-        
-        # O modelo PPO foi treinado com 5 inputs normalizados entre -2 e 2
-        # Estrutura: [Temp_t, Temp_t-1, Temp_t-2, Erro, Target]
-        self.observation_space = spaces.Box(low=-2.0, high=2.0, shape=(5,), dtype=np.float32)
-        
-        # Buffer de memória para as últimas 3 temperaturas (necessário para o Jitter)
+
+class TermocicladorHardwareEnv(gym.Env):
+    def __init__(self, port='COM3', baudrate=115200):
+        super(TermocicladorHardwareEnv, self).__init__()
+
+        self.ser = serial.Serial(port, baudrate, timeout=1)
+        time.sleep(2)
+
+        # Ação contínua compatível com PPO v3
+        self.action_space = spaces.Box(
+            low=-1.0, high=1.0, shape=(1,), dtype=np.float32
+        )
+        self.observation_space = spaces.Box(
+            low=-2.0, high=2.0, shape=(5,), dtype=np.float32
+        )
+
+        self._setpoints = gerar_setpoint_pcr(
+            ciclos=2,
+            t_estabilizacao=20,
+            t_desnaturacao=120,
+            t_anelamento=180,
+            t_extensao=120,
+        )
+        self._current_step = 0
         self.temp_history = deque([25.0, 25.0, 25.0], maxlen=3)
 
-    def normalizar(self, valor):
-        # Escalonamento para manter os valores próximos da faixa que a IA conhece
-        return (valor / 50.0) - 1.0
-
-    def _get_obs(self, temp_real, sp):
-        # Atualiza o histórico e monta o vetor de 5 posições
-        self.temp_history.append(temp_real)
-        erro = sp - temp_real
-        
-        obs = np.array([
-            self.normalizar(self.temp_history[2]), # Atual
-            self.normalizar(self.temp_history[1]), # Anterior
-            self.normalizar(self.temp_history[0]), # T-2
-            self.normalizar(erro),
-            self.normalizar(sp)
+    def _get_obs(self, temp, sp):
+        historico = list(self.temp_history)
+        return np.array([
+            historico[-1] / 100.0,
+            historico[-2] / 100.0,
+            historico[-3] / 100.0,
+            (sp - historico[-1]) / 100.0,
+            sp / 100.0
         ], dtype=np.float32)
-        return obs
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        
-        # Puxa os setpoints reais do meu arquivo setpoint.py
-        self._setpoints = gerar_setpoint_pcr(ciclos=2)
         self._current_step = 0
-        
-        # Garante que o hardware comece desligado e limpa lixo da Serial
+        self.temp_history = deque([25.0, 25.0, 25.0], maxlen=3)
+
+        self.ser.write(b"0\n")
         self.ser.reset_input_buffer()
-        self.ser.write(b"0\n") 
-        time.sleep(1)
-        
-        # Leitura inicial do DS18B20
-        line = self.ser.readline().decode('utf-8').strip()
-        temp_real = float(line) if line else 25.0
-        
-        # Preenche o histórico inicial com a temperatura atual
+
+        temp_real = 25.0
+        for _ in range(5):
+            try:
+                raw_line = self.ser.readline()
+                linha = raw_line.decode('utf-8', errors='ignore').strip()
+                if linha:
+                    temp_real = float(linha)
+                    break
+            except ValueError:
+                pass
+
         self.temp_history = deque([temp_real, temp_real, temp_real], maxlen=3)
-        
         sp = self._setpoints[self._current_step]
-        obs = self._get_obs(temp_real, sp)
-        return obs, {}
+        return self._get_obs(temp_real, sp), {}
+
+    def verificar_seguranca(self, temp):
+        if temp > MAX_SAFE_TEMP:
+            self.ser.write(b"0\n")
+            self.ser.close()
+            print(f"\n[!] EMERGÊNCIA: {temp}°C — sistema desligado!")
+            sys.exit(1)
 
     def step(self, action):
-        # Envia a decisão da IA para o hardware
-        self.ser.write(f"{action}\n".encode())
-        
-        # Lê o feedback com tratamento de ruído (ignora bytes inválidos)
+        u = float(action[0])
+        u = np.clip(u, -1.0, 1.0)
+
+        if u > 0.05:                       # Aquecer
+            pwm = int(u * 255)
+            comando = f"H{pwm}\n"
+        elif u < -0.05:                    # Esfriar
+            pwm = int(abs(u) * 255)
+            comando = f"C{pwm}\n"
+        else:                              # Desliga
+            comando = "0\n"
+
+        self.ser.write(comando.encode())
+        self.ser.reset_input_buffer()
+
         try:
             raw_line = self.ser.readline()
-            # errors='ignore' evita o erro de UnicodeDecode que você teve
             line = raw_line.decode('utf-8', errors='ignore').strip()
             temp_real = float(line)
         except (UnicodeDecodeError, ValueError):
-            # Se a leitura falhar, mantemos a última temperatura do histórico
             temp_real = self.temp_history[-1]
-            # print("Aviso: Ruído na leitura Serial detectado.") # Opcional para debug
+
+        self.temp_history.append(temp_real)
+        self.verificar_seguranca(temp_real)
 
         sp = self._setpoints[self._current_step]
         obs = self._get_obs(temp_real, sp)
-        
-        # Cálculo de recompensa
-        erro_bruto = sp - temp_real
-        reward = -abs(erro_bruto)
-        
+        reward = -abs(sp - temp_real)
+
         self._current_step += 1
         truncated = self._current_step >= len(self._setpoints)
-        terminated = False
-        
-        return obs, reward, terminated, truncated, {}
 
-# --- Bloco de Execução Principal ---
+        return obs, reward, False, truncated, {}
+
+
 if __name__ == "__main__":
-    env = RealThermalEnv(port='COM3')
-    
-    # Carrega o modelo treinado (deve estar na mesma pasta como .zip)
+    log_base = datetime.datetime.now().strftime("log_pcr_%Y-%m-%d_%H-%M-%S")
+    log_temp = log_base + "_temp.csv"
+
+    env = TermocicladorHardwareEnv(port='COM3')
+
     try:
-        model = PPO.load("ppo_pcr_jitter_final", env=env)
-        print("--- MODELO PPO CARREGADO E ATIVO ---")
+        model = PPO.load("ppo_pcr_v3_final", env=env)
+        print("--- IA v3 CARREGADA ---")
     except Exception as e:
-        print(f"ERRO AO CARREGAR MODELO: {e}")
-        exit()
+        print(f"ERRO AO CARREGAR IA: {e}")
+        sys.exit(1)
 
     obs, info = env.reset()
-    
-    print(f"\nIniciando Ciclos de PCR Reais...")
-    print("-" * 75)
-    print(f"{'PASSO':<8} | {'TEMP':<8} | {'ALVO':<8} | {'AÇÃO':<6} | {'ERRO':<8}")
-    print("-" * 75)
 
+    # O bloco try envolve a escrita completa
     try:
-        while True:
-            # A IA decide a ação baseada no estado atual do sistema
-            action, _states = model.predict(obs, deterministic=True)
-            
-            # Aplica a ação e recebe o novo estado do mundo real
-            obs, reward, terminated, truncated, info = env.step(action)
-            
-            # Recupera valores brutos para o log do terminal
-            temp_atual = env.temp_history[-1]
-            setpoint_atual = env._setpoints[env._current_step - 1]
-            erro_atual = setpoint_atual - temp_atual
-            
-            print(f"{env._current_step:<8} | {temp_atual:>5.2f}°C | {setpoint_atual:>5.1f}°C | {action:<6} | {erro_atual:>7.2f}")
-            
-            if truncated:
-                print("\n--- CICLO DE PCR FINALIZADO COM SUCESSO ---")
-                break
-                
-            time.sleep(1) # Delay de 1Hz entre leituras
-            
+        with open(log_temp, mode='w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(["passo", "horario", "temp_real", "setpoint", "acao", "recompensa"])
+
+            while True:
+                action, _ = model.predict(obs, deterministic=True)
+                obs, reward, terminated, truncated, info = env.step(action)
+
+                temp_atual = env.temp_history[-1]
+                setpoint_atual = env._setpoints[env._current_step - 1]
+                acao_str = f"{float(action[0]):.3f}"
+
+                writer.writerow([
+                    env._current_step,
+                    datetime.datetime.now().strftime("%H:%M:%S"),
+                    temp_atual,
+                    setpoint_atual,
+                    acao_str,
+                    reward
+                ])
+                f.flush()
+
+                print(
+                    f"Passo: {env._current_step:<4} | "
+                    f"{datetime.datetime.now().strftime('%H:%M:%S')} | "
+                    f"Real: {temp_atual:>6.2f}°C | "
+                    f"Alvo: {setpoint_atual:>5.1f}°C | "
+                    f"Ação: {float(action[0]):>+.3f}"
+                )
+
+                if truncated:
+                    print("\n--- CICLO DE PCR FINALIZADO ---")
+                    break
+
+                time.sleep(1)
+
     except KeyboardInterrupt:
-        print("\nInterrompido manualmente. Desligando sistema...")
+        print("\nExecução interrupted pelo usuário.")
+
     finally:
-        # Comando de segurança para não deixar a Peltier ligada ao sair
-        env.ser.write(b"0\n")
-        env.ser.close()
+        # Desliga atuadores e fecha porta serial
+        try:
+            env.ser.write(b"0\n")
+            env.ser.close()
+        except Exception:
+            pass
+
+        # RENOMEAR APÓS FECHAR O ARQUIVO CSV (FORA DO WITH)
+        log_final = f"{log_base}_{env._current_step}passos.csv"
+        
+        if os.path.exists(log_temp):
+            try:
+                os.rename(log_temp, log_final)
+                print(f"Log salvo: {log_final}")
+            except PermissionError:
+                # Caso o SO retenha o handle por alguns milissegundos
+                time.sleep(0.5)
+                os.rename(log_temp, log_final)
+                print(f"Log salvo: {log_final}")
+
+        print("Sistema desligado com segurança.")
