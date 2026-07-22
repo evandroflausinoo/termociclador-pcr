@@ -29,37 +29,32 @@ from pid_com_jitter import NetworkSimulator, simulate_com_jitter
 # ============================================================
 
 
-class VaporizadorJitterEnv(gym.Env):
+class TermocicladorJitterEnvV3(gym.Env):
     """
-    Ambiente Gymnasium que simula o termociclador PCR com efeitos de rede.
-
-    O agente PPO atua como controlador no PC:
-        - Observa: histórico de 3 temperaturas + erro atual + setpoint atual
-        - Ação: discreta entre {-1.0, 0.0, +1.0} (resfriar, manter, aquecer)
-        - Recompensa: negativo do erro absoluto entre setpoint e temperatura real
-
-    A comunicação com o sistema físico (ESP) é simulada com
-    atraso, jitter e perda de pacotes nos dois canais.
+    Ambiente compatível com o modelo PPO v3 (ação contínua).
+    Parâmetros calibrados com dados reais do hardware:
+        - alpha=0.005 (perda de calor real)
+        - beta=0.4    (ganho real da Peltier ~0.4°C/s)
+        - noise_std=0.3 (ruído real do sensor DS18B20)
     """
 
     def __init__(self):
         super().__init__()
 
-        self.action_space = spaces.Discrete(3)
+        # ação contínua — igual ao treinamento v3
+        self.action_space = spaces.Box(
+            low=-1.0, high=1.0, shape=(1,), dtype=np.float32
+        )
         self.observation_space = spaces.Box(
             low=-2.0, high=2.0, shape=(5,), dtype=np.float32
         )
 
-        # configuração da rede simulada
         self.atraso_min = 1.0
         self.atraso_max = 3.5
         self.prob_perda = 0.3
-
-        # flags para testes A/B (ligar/desligar jitter por canal)
         self.usar_jitter_sensor = True
         self.usar_jitter_comando = True
 
-        # logs por passo — preenchidos durante o rollout para análise
         self.last_u_cmd = 0.0
         self.last_u_apl = 0.0
         self.last_temp_real = 25.0
@@ -67,12 +62,18 @@ class VaporizadorJitterEnv(gym.Env):
         self.last_target = 25.0
 
     def reset(self, seed=None, options=None):
-        """Reinicia o ambiente para um novo episódio de treinamento."""
         super().reset(seed=seed)
         if seed is not None:
             np.random.seed(seed)
 
-        self.params = ThermalParams()
+        # parâmetros calibrados com hardware real
+        self.params = ThermalParams(
+            Tamb=25.0,
+            alpha=0.005,
+            beta=0.4,
+            dt=1.0,
+            noise_std=0.3
+        )
         self.model = ThermalModel(self.params, t0=25.0)
 
         self.net = NetworkSimulator(
@@ -85,35 +86,22 @@ class VaporizadorJitterEnv(gym.Env):
         self.u_aplicado_atual = 0.0
         self.memoria_ia = deque([25.0, 25.0, 25.0], maxlen=3)
         self.steps = 0
-        self._setpoints = gerar_setpoint_pcr(ciclos=10)  # episódios longos para treinamento
+        self._setpoints = gerar_setpoint_pcr(ciclos=10)
 
-        target = self._setpoints[self.steps]
+        target = self._setpoints[0]
         self.last_target = target
-        self.last_u_cmd = 0.0
-        self.last_u_apl = 0.0
         self.last_temp_real = self.model.t
         self.last_temp_vis = self.temp_visualizada
 
         return self._get_obs(target), {}
 
     def step(self, action):
-        """
-        Avança o ambiente em um passo de tempo.
-
-        Fluxo:
-            1. Agente decide u_cmd
-            2. u_cmd percorre a rede PC→ESP (com atraso/perda)
-            3. Planta evolui com u_aplicado (último comando recebido pelo ESP)
-            4. Temperatura real percorre a rede ESP→PC (com atraso/perda)
-            5. Agente recebe obs com temp_visualizada (possivelmente defasada)
-        """
         self.steps += 1
 
-        # ação discreta do agente mapeada para sinal contínuo de controle
-        u_cmd = {0: -1.0, 1: 0.0, 2: 1.0}[int(action)]
+        u_cmd = float(action[0])
+        u_cmd = np.clip(u_cmd, -1.0, 1.0)
         self.last_u_cmd = u_cmd
 
-        # canal PC → ESP: envia comando e tenta receber o mais recente
         if self.usar_jitter_comando:
             self.net.enviar_atuador(self.steps, u_cmd)
             self.u_aplicado_atual, _ = self.net.receber_atuador(
@@ -124,11 +112,9 @@ class VaporizadorJitterEnv(gym.Env):
 
         self.last_u_apl = self.u_aplicado_atual
 
-        # planta evolui com o comando que o ESP realmente está aplicando
         temp_real = self.model.step(self.u_aplicado_atual)
         self.last_temp_real = temp_real
 
-        # canal ESP → PC: envia leitura do sensor e tenta receber
         if self.usar_jitter_sensor:
             self.net.enviar_sensor(self.steps, temp_real)
             self.temp_visualizada, _ = self.net.receber_sensor(
@@ -140,57 +126,43 @@ class VaporizadorJitterEnv(gym.Env):
         self.last_temp_vis = self.temp_visualizada
         self.memoria_ia.append(self.temp_visualizada)
 
-        # setpoint do passo atual
         idx = min(self.steps, len(self._setpoints) - 1)
         target = self._setpoints[idx]
         self.last_target = target
 
-        # recompensa baseada no erro real (não no visualizado)
         reward = -abs(target - temp_real)
-
         terminated = False
         truncated = self.steps >= 600
 
         return self._get_obs(target), reward, terminated, truncated, {}
 
     def _get_obs(self, target: float) -> np.ndarray:
-        """
-        Constrói o vetor de observação normalizado para o agente.
-
-        Componentes:
-            [t_atual, t-1, t-2] — histórico de temperaturas visualizadas (÷100)
-            erro_norm           — (setpoint - t_atual) ÷ 100
-            alvo_norm           — setpoint ÷ 100
-        """
         historico = list(self.memoria_ia)
-        return np.array(
-            [
-                historico[-1] / 100.0,
-                historico[-2] / 100.0,
-                historico[-3] / 100.0,
-                (target - historico[-1]) / 100.0,
-                target / 100.0,
-            ],
-            dtype=np.float32,
-        )
+        return np.array([
+            historico[-1] / 100.0,
+            historico[-2] / 100.0,
+            historico[-3] / 100.0,
+            (target - historico[-1]) / 100.0,
+            target / 100.0,
+        ], dtype=np.float32)
 
 
 def rodar_simulacao_ia(seed: int = 42) -> dict | None:
     """
-    Carrega o modelo PPO treinado e executa uma simulação de 600 passos.
+    Carrega o modelo PPO v3 treinado e executa uma simulação de 600 passos.
 
     Returns:
         Dicionário com históricos de temperatura, setpoint e comandos,
         ou None se o modelo não for encontrado.
     """
-    print("Rodando IA (PPO)...")
-    env = VaporizadorJitterEnv()
+    print("Rodando IA (PPO v3 — ação contínua, parâmetros reais)...")
+    env = TermocicladorJitterEnvV3()
 
     try:
-        caminho_modelo = os.path.join(os.path.dirname(__file__), "ppo_pcr_jitter_final")
+        caminho_modelo = os.path.join(os.path.dirname(__file__), "ppo_pcr_v3_final")
         model = PPO.load(caminho_modelo, env=env)
     except Exception as e:
-        print("Modelo PPO não encontrado ('ppo_pcr_jitter_final.zip').")
+        print("Modelo PPO v3 não encontrado ('ppo_pcr_v3_final.zip').")
         print("Detalhe:", e)
         return None
 
@@ -227,7 +199,9 @@ def rodar_simulacao_pid(seed: int = 42) -> dict:
     print("Rodando PID...")
     np.random.seed(seed)
 
-    params = ThermalParams()
+    params = ThermalParams(
+        Tamb=25.0, alpha=0.005, beta=0.4, dt=1.0, noise_std=0.3
+    )
     model = ThermalModel(params, t0=25.0)
     setpoints = gerar_setpoint_pcr(ciclos=10)[:600]
     pid = PIDController(kp=0.2, ki=0.5, kd=0.0)
@@ -235,8 +209,6 @@ def rodar_simulacao_pid(seed: int = 42) -> dict:
 
     temps, _ = simulate_com_jitter(model, pid, net, setpoints)
 
-    # reconstrói temp_visualizada e u_apl rodando de novo (para os logs de análise)
-    # usa a mesma seed para garantir mesma rede
     np.random.seed(seed)
     model.reset(t0=25.0)
     pid.reset()
@@ -274,14 +246,14 @@ def rodar_simulacao_pid(seed: int = 42) -> dict:
 
 def plot_comparacao(ia_data: dict, pid_data: dict) -> None:
     """
-    Gera 5 gráficos comparativos entre PID e PPO, salvando em graficos/.
+    Gera 5 gráficos comparativos entre PID e PPO v3, salvando em graficos/.
 
     Gráficos gerados:
-        01 — Comparativo principal: PID vs PPO vs Setpoint
-        02 — PID: temperatura real vs visualizada (efeito da rede no sensor)
-        03 — PID: u_cmd vs u_aplicado (efeito da rede no comando)
-        04 — PPO: temperatura real vs visualizada
-        05 — PPO: u_cmd vs u_aplicado
+        01 — Comparativo principal: PID vs PPO v3 vs Setpoint
+        02 — PID: temperatura real vs visualizada
+        03 — PID: u_cmd vs u_aplicado
+        04 — PPO v3: temperatura real vs visualizada
+        05 — PPO v3: u_cmd vs u_aplicado
     """
     def _salvar(nome: str) -> None:
         plt.tight_layout()
@@ -293,13 +265,13 @@ def plot_comparacao(ia_data: dict, pid_data: dict) -> None:
     plt.figure(figsize=(12, 6))
     plt.plot(pid_data["alvos"], "k--", label="Setpoint (PCR)", linewidth=2, alpha=0.6)
     plt.plot(pid_data["temps_real"], "r-", label="PID Clássico (com Jitter)", linewidth=1.5, alpha=0.8)
-    plt.plot(ia_data["temps_real"], "b-", label='IA (PPO) — "Zen Mode"', linewidth=2.0)
-    plt.title("Batalha Final: Controle Clássico (PID) vs Inteligência Artificial (RL)")
+    plt.plot(ia_data["temps_real"], "b-", label='IA PPO v3 — Ação Contínua', linewidth=2.0)
+    plt.title("Controle Clássico (PID) vs IA PPO v3 — Parâmetros Calibrados com Hardware Real")
     plt.ylabel("Temperatura (°C)")
     plt.xlabel("Tempo (segundos)")
     plt.legend()
     plt.grid(True)
-    _salvar("01_comparativo_pid_vs_ppo.png")
+    _salvar("01_comparativo_pid_vs_ppo_v3.png")
 
     # 02 — PID: sensor real vs visualizado
     plt.figure(figsize=(12, 4))
@@ -324,39 +296,38 @@ def plot_comparacao(ia_data: dict, pid_data: dict) -> None:
     plt.grid(True)
     _salvar("03_pid_comando_ucmd_vs_uaplicado.png")
 
-    # 04 — PPO: sensor real vs visualizado
+    # 04 — PPO v3: sensor real vs visualizado
     plt.figure(figsize=(12, 4))
     plt.plot(ia_data["alvos"], "k--", label="Setpoint", alpha=0.6)
-    plt.plot(ia_data["temps_real"], label="PPO: temp_real (planta)")
-    plt.plot(ia_data["temps_vis"], label="PPO: temp_visualizada (PC)")
-    plt.title("PPO: Efeito da rede no sensor (ESP→PC)")
+    plt.plot(ia_data["temps_real"], label="PPO v3: temp_real (planta)")
+    plt.plot(ia_data["temps_vis"], label="PPO v3: temp_visualizada (PC)")
+    plt.title("PPO v3: Efeito da rede no sensor (ESP→PC)")
     plt.ylabel("Temperatura (°C)")
     plt.xlabel("Tempo (segundos)")
     plt.legend()
     plt.grid(True)
-    _salvar("04_ppo_sensor_real_vs_visualizada.png")
+    _salvar("04_ppo_v3_sensor_real_vs_visualizada.png")
 
-    # 05 — PPO: comando decidido vs aplicado
+    # 05 — PPO v3: comando decidido vs aplicado
     plt.figure(figsize=(12, 4))
-    plt.plot(ia_data["u_cmd"], label="PPO: u_cmd (PC decide)")
-    plt.plot(ia_data["u_apl"], label="PPO: u_aplicado (ESP aplica)")
-    plt.title("PPO: Efeito da rede no comando (PC→ESP)")
+    plt.plot(ia_data["u_cmd"], label="PPO v3: u_cmd (PC decide)")
+    plt.plot(ia_data["u_apl"], label="PPO v3: u_aplicado (ESP aplica)")
+    plt.title("PPO v3: Efeito da rede no comando (PC→ESP)")
     plt.ylabel("u")
     plt.xlabel("Tempo (segundos)")
     plt.legend()
     plt.grid(True)
-    _salvar("05_ppo_comando_ucmd_vs_uaplicado.png")
+    _salvar("05_ppo_v3_comando_ucmd_vs_uaplicado.png")
 
 
 def main() -> None:
-    os.makedirs("graficos", exist_ok=True)  # cria a pasta de saída se não existir
+    os.makedirs("graficos", exist_ok=True)
 
     pid_data = rodar_simulacao_pid(seed=42)
     ia_data = rodar_simulacao_ia(seed=42)
 
     if ia_data is None:
-        # PPO não disponível — plota apenas o PID com debug de rede
-        print("Plotando apenas PID (modelo PPO não encontrado).")
+        print("Plotando apenas PID (modelo PPO v3 não encontrado).")
         plt.figure(figsize=(12, 6))
         plt.plot(pid_data["alvos"], "k--", label="Setpoint (PCR)", linewidth=2, alpha=0.6)
         plt.plot(pid_data["temps_real"], "r-", label="PID: temp_real", linewidth=1.5)

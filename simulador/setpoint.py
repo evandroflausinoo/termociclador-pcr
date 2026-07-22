@@ -3,10 +3,10 @@ import numpy as np
 
 def gerar_setpoint_pcr(
     ciclos: int = 2,
-    t_estabilizacao: int = 10,
-    t_desnaturacao: int = 20,
-    t_anelamento: int = 20,
-    t_extensao: int = 20,
+    t_estabilizacao: int = 20,
+    t_desnaturacao: int = 120,
+    t_anelamento: int = 180,
+    t_extensao: int = 120,
 ) -> np.ndarray:
     """
     Gera o perfil de setpoints de temperatura para simular ciclos de PCR.
