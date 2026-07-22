@@ -136,9 +136,9 @@ termociclador-pcr/
 │   ├── confronto_final.py          # ambiente PPO v3 + comparação
 │   ├── real_world_control.py       # interface com hardware real
 │   └── graficos/                   # gráficos gerados
-│    └── modelos/                    # modelos de treinamento
-│    └── logs/
-│    └── treinos/
+│   └── modelos/                    # modelos de treinamento
+│   └── logs/
+│   └── treinos/
 │
 └── firmware/
     └── teste_sensor_pcr.ino        # firmware ESP32
