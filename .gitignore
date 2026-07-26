@@ -1,0 +1,10 @@
+# Artefatos pesados
+simulador/modelos/*.zip
+simulador/logs/**/*.csv
+simulador/logs/**/*.png
+simulador/graficos/*.png
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.zip
