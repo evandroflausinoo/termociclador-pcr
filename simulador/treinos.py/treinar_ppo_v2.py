@@ -18,24 +18,18 @@ from pid_com_jitter import NetworkSimulator
 
 
 # ============================================================
-# PPO v4 — Recompensa com componente de VELOCIDADE
+# PPO v2 — Recompensa Básica Tradicional (Erro Absoluto)
 #
-# Problema identificado no v3:
-#   A IA usava ação -0.4 quando deveria usar -1.0 para descer
-#   rapidamente. Isso porque a recompensa só penalizava o erro,
-#   sem recompensar chegar rápido.
-#
-# Solução v4:
-#   + Bônus por se mover na direção certa E com velocidade alta
-#   + Penalidade maior por ficar parado longe do alvo
-#   + Bônus de precisão mantido para estabilização
+# Estrutura v2:
+#   - Penalização proporcional ao erro absoluto: -abs(target - temp_real)
+#   - Bônus simples para quando está dentro de ±1.0°C do alvo
+#   - Sem componente de velocidade ou penalidades dinâmicas
 # ============================================================
 
 
-class TermocicladorRealEnvV4(gym.Env):
+class TermocicladorRealEnvV2(gym.Env):
     """
-    Ambiente v4 — recompensa com componente de velocidade.
-    Ensina a IA a usar potência máxima quando está longe do alvo.
+    Ambiente v2 — Recompensa tradicional de acompanhamento de setpoint.
     """
 
     def __init__(self):
@@ -57,7 +51,6 @@ class TermocicladorRealEnvV4(gym.Env):
         self.last_target = 25.0
         self.last_u_cmd = 0.0
         self.last_u_apl = 0.0
-        self.ultima_temp = 25.0  # para calcular velocidade
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -83,7 +76,6 @@ class TermocicladorRealEnvV4(gym.Env):
         self.u_aplicado_atual = 0.0
         self.memoria_ia = deque([25.0, 25.0, 25.0], maxlen=3)
         self.steps = 0
-        self.ultima_temp = 25.0
 
         ciclos = np.random.randint(3, 8)
         self._setpoints = gerar_setpoint_pcr(
@@ -130,43 +122,16 @@ class TermocicladorRealEnvV4(gym.Env):
         self.last_target = target
 
         # ============================================================
-        # RECOMPENSA v4 — componente de velocidade
+        # RECOMPENSA v2 — Estrutura Básica Tradicional
         # ============================================================
-        erro_sinal = target - temp_real      # com sinal (positivo = precisa aquecer)
-        erro_abs = abs(erro_sinal)
+        erro_abs = abs(target - temp_real)
 
-        # 1. Recompensa base: penaliza erro
+        # 1. Recompensa base: penalização direta do erro
         reward = -erro_abs
 
-        # 2. Bônus de precisão (estabilização perto do alvo)
-        if erro_abs < 2.0:
-            reward += 3.0    # bônus alto por estar dentro de ±2°C
-        elif erro_abs < 5.0:
-            reward += 1.0    # bônus médio por estar dentro de ±5°C
-
-        # 3. Penalidade extra por estar muito longe
-        if erro_abs > 20.0:
-            reward -= 2.0
-        elif erro_abs > 10.0:
-            reward -= 0.5
-
-        # 4. Bônus de velocidade: recompensa por mover na direção certa
-        #    Isso ensina a usar potência máxima quando está longe
-        velocidade = temp_real - self.ultima_temp  # positivo = aquecendo
-
-        if erro_abs > 10.0:  # só aplica quando está longe do alvo
-            direcao_certa = (
-                (erro_sinal > 0 and velocidade > 0) or  # precisa aquecer e está aquecendo
-                (erro_sinal < 0 and velocidade < 0)      # precisa resfriar e está resfriando
-            )
-            if direcao_certa:
-                # quanto mais rápido na direção certa, maior o bônus
-                reward += abs(velocidade) * 1.0
-            else:
-                # penalidade por ir na direção errada quando está longe
-                reward -= abs(velocidade) * 0.5
-
-        self.ultima_temp = temp_real
+        # 2. Bônus simples de estabilização
+        if erro_abs < 1.0:
+            reward += 1.0
         # ============================================================
 
         terminated = False
@@ -194,8 +159,8 @@ class ProgressCallback(BaseCallback):
     def _on_training_start(self):
         self.start_time = time.time()
         print(f"\n{'='*60}")
-        print(f"TREINAMENTO PPO v4 — Recompensa com velocidade")
-        print(f"Novidade: bônus por mover rápido na direção certa")
+        print(f"TREINAMENTO PPO v2 — Recompensa Básica Tradicional")
+        print(f"Objetivo: Acompanhamento de erro simples com atraso de rede")
         print(f"Total de passos: {self.total_steps:,}")
         print(f"{'='*60}\n")
 
@@ -219,18 +184,18 @@ def main():
 
     TOTAL_STEPS = 1_000_000
 
-    env = Monitor(TermocicladorRealEnvV4())
+    env = Monitor(TermocicladorRealEnvV2())
 
     progress_cb = ProgressCallback(total_steps=TOTAL_STEPS)
 
     checkpoint_cb = CheckpointCallback(
         save_freq=100_000,
         save_path="modelos/",
-        name_prefix="ppo_pcr_v4",
+        name_prefix="ppo_pcr_v2",
         verbose=1
     )
 
-    print("Criando modelo PPO v4...")
+    print("Criando modelo PPO v2...")
     model = PPO(
         "MlpPolicy",
         env,
@@ -249,11 +214,11 @@ def main():
         callback=[progress_cb, checkpoint_cb],
     )
 
-    model.save("ppo_pcr_v4_final")
-    print("\n✅ Modelo salvo como 'ppo_pcr_v4_final.zip'")
+    # Salva o arquivo na raiz ou na pasta de modelos
+    model.save("modelos/ppo_pcr_v2_final")
+    model.save("ppo_pcr_v2_final")
+    print("\n✅ Modelo salvo como 'ppo_pcr_v2_final.zip'")
     print("✅ Checkpoints salvos em 'modelos/'")
-    print("\nPara usar no hardware, atualize o nome no real_world_control.py:")
-    print('  model = PPO.load("ppo_pcr_v4_final", env=env)')
 
 
 if __name__ == "__main__":
