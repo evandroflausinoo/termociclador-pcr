@@ -1,6 +1,6 @@
 # Termociclador PCR - Controle Térmico com Inteligência Artificial
 
-(GIT DESATUALIZADO, ATUALMENTE TESTANDO V10)
+(GIT DESATUALIZADO, ATUALMENTE TESTANDO v10)
 
 Projeto de TCC que desenvolve e valida um termociclador PCR controlado por
 Reinforcement Learning (PPO), comparando com controle clássico PID em cenário
