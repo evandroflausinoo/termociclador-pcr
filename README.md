@@ -26,7 +26,7 @@ A fase atual introduz a **validação física e identificação paramétrica rea
 
 ## 2. Arquitetura do Sistema
 
-┌─────────────────────────────────────────────────────────┐
+                  ┌─────────────────────────────────────────────────────────┐
                    │                   Estação de Controle                   │
                    │                                                         │
                    │   ┌───────────────┐           ┌─────────────────────┐   │
@@ -112,7 +112,7 @@ Onde:
 
 Diferente de sistemas de temporização cega, a transição entre fases segue uma **Máquina de Estados Orientada a Eventos**. Uma etapa só é considerada concluída quando o sistema atinge a faixa de tolerância e sustenta a temperatura de forma contínua pelo tempo de *hold* exigido.
 
-┌────────────────────────────────────────┐
+              ┌────────────────────────────────────────┐
              │       Estabilização Inicial (20 s)     │
              └───────────────────┬────────────────────┘
                                  │ (t >= 20 s)
@@ -251,4 +251,6 @@ python -m pcr_control.cli executar --modelo modelos/ppo_pcr_final.zip --sim --ji
 
 python -m pcr_control.cli plotar logs/pid_clamp_only/<pasta_do_ensaio>/data.csv
 
-9. Métricas Científicas de AvaliaçãoCada execução gera um arquivo data.csv e um meta.json estruturados na pasta logs/. O sistema processa automaticamente as seguintes métricas:RMSE Global ($^\circ\text{C}$): Erro quadrático médio em relação ao setpoint dinâmico.Tempo Total de Conclusão do Protocolo ($t_{\text{total}}$): Duração real para validação de todos os holds biológicos.Overshoot na Desnaturação ($^\circ\text{C}$): Desvio de pico acima de $95,0^\circ\text{C}$.Fração Fora da Faixa ($|e| > 0,5^\circ\text{C}$): Percentual do tempo fora da tolerância nominal.Intervenções do Shield: Frequência de atuações do limitador de slew-rate na ponte H.10. AutorEvandro Flausino AraujoEngenharia e Controle Térmico InteligenteGitHub: @evandroflausinoo
+9. Métricas Científicas de AvaliaçãoCada execução gera um arquivo data.csv e um meta.json estruturados na pasta logs/. O sistema processa automaticamente as seguintes métricas:RMSE Global ($^\circ\text{C}$): Erro quadrático médio em relação ao setpoint dinâmico.Tempo Total de Conclusão do Protocolo ($t_{\text{total}}$): Duração real para validação de todos os holds biológicos.Overshoot na Desnaturação ($^\circ\text{C}$): Desvio de pico acima de $95,0^\circ\text{C}$.Fração Fora da Faixa ($|e| > 0,5^\circ\text{C}$): Percentual do tempo fora da tolerância nominal.Intervenções do Shield: Frequência de atuações do limitador de slew-rate na ponte H.
+
+10. AutorEvandro Flausino AraujoEngenharia e Controle Térmico InteligenteGitHub: @evandroflausinoo
