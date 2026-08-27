@@ -253,4 +253,7 @@ python -m pcr_control.cli plotar logs/pid_clamp_only/<pasta_do_ensaio>/data.csv
 
 9. Métricas Científicas de AvaliaçãoCada execução gera um arquivo data.csv e um meta.json estruturados na pasta logs/. O sistema processa automaticamente as seguintes métricas:RMSE Global ($^\circ\text{C}$): Erro quadrático médio em relação ao setpoint dinâmico.Tempo Total de Conclusão do Protocolo ($t_{\text{total}}$): Duração real para validação de todos os holds biológicos.Overshoot na Desnaturação ($^\circ\text{C}$): Desvio de pico acima de $95,0^\circ\text{C}$.Fração Fora da Faixa ($|e| > 0,5^\circ\text{C}$): Percentual do tempo fora da tolerância nominal.Intervenções do Shield: Frequência de atuações do limitador de slew-rate na ponte H.
 
-10. AutorEvandro Flausino AraujoEngenharia e Controle Térmico InteligenteGitHub: @evandroflausinoo
+````
+10. AutorEvandro Flausino AraujoEngenharia e Controle Térmico Inteligente
+
+11. GitHub: @evandroflausinoo
