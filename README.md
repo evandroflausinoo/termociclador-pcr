@@ -166,7 +166,7 @@ Diferente de sistemas de temporização cega, a transição entre fases segue um
 * **Corte Térmico de Emergência:** Ativação automática se $T_{\text{real}} \ge 98,0^\circ\text{C}$ (força $u = -0,5$).
 * **Limitador de Taxa de Variação (*Slew-Rate Limiter*):** Restringe $\Delta u \le 0,25/\text{s}$ para proteger a integridade dos transistores MOSFET da ponte H BTS7960 contra picos de corrente reversa[cite: 8].
 
----
+```
 
 ## 7. Estrutura do Repositório
 
@@ -201,7 +201,7 @@ pcr_control/
 ├── pyproject.toml                  # Dependências e empacotamento do pacote Python
 └── README.md                       # Documentação técnica
 
----
+```
 
 ## 8. Instalação e Uso
 
