@@ -26,7 +26,7 @@ A fase atual introduz a **validação física e identificação paramétrica rea
 
 ## 2. Arquitetura do Sistema
 
-                  ┌─────────────────────────────────────────────────────────┐
+                   ┌─────────────────────────────────────────────────────────┐
                    │                   Estação de Controle                   │
                    │                                                         │
                    │   ┌───────────────┐           ┌─────────────────────┐   │
@@ -112,7 +112,7 @@ Onde:
 
 Diferente de sistemas de temporização cega, a transição entre fases segue uma **Máquina de Estados Orientada a Eventos**. Uma etapa só é considerada concluída quando o sistema atinge a faixa de tolerância e sustenta a temperatura de forma contínua pelo tempo de *hold* exigido.
 
-              ┌────────────────────────────────────────┐
+             ┌────────────────────────────────────────┐
              │       Estabilização Inicial (20 s)     │
              └───────────────────┬────────────────────┘
                                  │ (t >= 20 s)
